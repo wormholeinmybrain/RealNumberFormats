@@ -7,8 +7,8 @@ using namespace std;
 
 
 int main() {
-	Dummy::showRecord();
-	Dummy::resetRecord();
+	Dummy::showAllRecords();
+	Dummy::resetAllRecords();
 	Dummy a = Dummy(1.1);
 	Dummy b = Dummy(2.2);
 	Dummy c = Dummy(3.3);
@@ -229,7 +229,7 @@ int main() {
 	assert(isinf(a2) == false);
 	assert(erfc(a2) == erfc(1.0));
 	printf("new functions assertion passed\n");
-	Dummy::showRecord();
-	Dummy::resetRecord();
-	Dummy::showRecord();
+	Dummy::showAllRecords();
+	Dummy::resetAllRecords();
+	Dummy::showAllRecords();
 }
