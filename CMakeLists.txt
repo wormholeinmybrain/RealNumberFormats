@@ -12,6 +12,8 @@ add_executable(
 test
 Dummy.h
 Dummy.cpp
+fixedptc.h
+floatx.hpp
 test.cpp)
 
 #set_target_properties(test PROPERTIES LINKER_LANGUAGE C20)

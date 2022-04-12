@@ -5,26 +5,29 @@
 #pragma once
 #ifndef DUMMY_H
 #define DUMMY_H
-//#include "floatx.hpp"
+#include "floatx.hpp"
+#include "fixedptc.h"
 
 
 /**
  * When DUMMY_IN_THE_WILDERNESS is defined, dummy class will be used
- * to verify the installation
+ * with a double type as single private data member
  */
-#define DUMMY_IN_THE_WILDERNESS
-//#define DOUBLE Dummy
+//#define DUMMY_IN_THE_WILDERNESS
+
 
 
 /**
-* When VARIABLE_FLOATING_POINT_SOFTFLOAT is defined, floatx will be used
-*/
-//#define VARIABLE_FLOATING_POINT_SOFTFLOAT
+ * When VARIABLE_FLOATING_POINT_FLOATX is defined, FloatX will substitute
+ * double as the single private data member
+ */
+//#define VARIABLE_FLOATING_POINT_FLOATX //Tested 11.04.2022
 
 /**
- * When FIXED_POINT_FPM is defined, FPM will be used
+ * When FIXED_POINT_FIXEDPTC is defined, FIXEDPTC will substitute
+ * double as the single private data member
  */
-//#define FIXED_POINT_FPM
+#define FIXED_POINT_FIXEDPTC
 
 /**
  * Change EXPONENT to change the double precision floating point number
@@ -33,30 +36,41 @@
 #define AVAILABLE_BITS  63
 #define EXPONENT        11
 #define FRACTION        (AVAILABLE_BITS-EXPONENT)
-
 /**
- * "#define Double Dummy" should always be set to substitute double
+ * Dummy will be used as a host of different arithmetical core components
+ * and therefore should always be defined.
  */
 #define DOUBLE Dummy
+
 
 /**
  *
  * "#define VFP (flx::floatx<EXPONENT, FRACTION, double>)" should be
  * set only when floatx is used
  */
- /*
-  * FloatX is abandoned for not being able to represent floating point
-  * numbers with arbitrary combinations of exponent and fraction
-#define VFP (flx::floatx<EXPONENT, FRACTION, double>)
-*/
+
+#ifdef VARIABLE_FLOATING_POINT_FLOATX
+#define VFP flx::floatx<EXPONENT, FRACTION, double>
+//VFP stands for variable floating point
+//#define DOUBLE (flx::floatx<EXPONENT, FRACTION, double>)
+#endif //end of VARIABLE_FLOATING_POINT_FLOATX
 
 
 class Dummy {
 #ifdef  DUMMY_IN_THE_WILDERNESS
 private:
     double content;
-#endif
+#endif //end of Dummy_IN_THE_WILDERNESS
+#ifdef VARIABLE_FLOATING_POINT_FLOATX
+private:
+    flx::floatx<EXPONENT, FRACTION, double>content;
+#endif //end of VARIABLE_FLOATING_POINT_FLOATX
+#ifdef FIXED_POINT_FIXEDPTC
+private:
+    fixedpt content;
+#endif //end of FIXED_POINT_FIXEDPTC
 
+/*=============== static statistical methods ===============*/
 #ifndef DISABLE_OPERATION_STATISTICS
     /**
      * Records of the minimum as well as the maximum
@@ -88,7 +102,6 @@ private:
 
 #endif
 
-
 public:
 #ifndef DISABLE_OPERATION_STATISTICS
     /**
@@ -111,6 +124,7 @@ public:
     static void showAllRecords();                       //017
 
 #endif
+/*============== static statistical methods ends =============*/
     //constexpr explicit Dummy():content{ 0.0 } {};
     /* Modified by Liu Jian on 06.03.2022
      * since DOUBLE is used in unnamed union, it can't
@@ -119,13 +133,8 @@ public:
      */
     Dummy() = default;
 
-/**TODO
- * 1. remove all function declaration from dummy.h
- * 2. insert exponent recording methods as well as preprocessing directives
- * @param
- */
 
-
+#ifdef DUMMY_IN_THE_WILDERNESS
     constexpr Dummy(double d):content{d}{               //018
 #ifndef DISABLE_OPERATION_STATISTICS
         recordExponent(d);
@@ -171,6 +180,123 @@ public:
         incrNumConv();
 #endif
     };
+#endif //end of DUMMY_IN_THE_WILDERNESS
+
+/**
+  * The function set for FloatX, the "v" behind the number means variable floating point
+  */
+#ifdef VARIABLE_FLOATING_POINT_FLOATX
+    Dummy(VFP v):content{v}{                            //018-1-v
+#ifndef DISABLE_OPERATION_STATISTICS
+        recordExponent(v);
+#endif
+    }
+   Dummy(double d){                                     //018-v
+        content = VFP(d);
+#ifndef DISABLE_OPERATION_STATISTICS
+        recordExponent(d);
+#endif
+    };
+
+    explicit Dummy(int i){                              //019-v
+        content = VFP(i);
+#ifndef DISABLE_OPERATION_STATISTICS
+        recordExponent(content);
+        incrNumConv();
+#endif
+    };
+
+    explicit Dummy(long int li){                        //020-v
+        content = VFP(li);
+#ifndef DISABLE_OPERATION_STATISTICS
+        recordExponent(content);
+        incrNumConv();
+#endif
+    };
+
+    explicit Dummy(unsigned int ui){                    //021-v
+        content = VFP(ui);
+#ifndef DISABLE_OPERATION_STATISTICS
+        recordExponent(content);
+        incrNumConv();
+#endif
+    };
+
+    explicit Dummy(unsigned long int uli){              //022-v
+        content = VFP(uli);
+#ifndef DISABLE_OPERATION_STATISTICS
+        recordExponent(content);
+        incrNumConv();
+#endif
+    };
+
+    explicit Dummy(long long unsigned int llui){        //023-v
+        content = VFP(llui);
+#ifndef DISABLE_OPERATION_STATISTICS
+        recordExponent(content);
+        incrNumConv();
+#endif
+    };
+#endif //end of VARIABLE_FLOATING_POINT_FLOATX
+
+ /**
+  * The function set for FIXEDPT, the "f" behind the number means fixed point
+  */
+#ifdef FIXED_POINT_FIXEDPTC
+
+    Dummy(fixedpt f):content{f}{                            //018-1-f
+#ifndef DISABLE_OPERATION_STATISTICS
+        recordExponent(v);
+#endif
+    }
+    
+    Dummy(double d){                                        //018-f
+        content = VFP(d);
+#ifndef DISABLE_OPERATION_STATISTICS
+        recordExponent(d);
+#endif
+    };
+
+    explicit Dummy(int i){                                  //019-f
+        content = VFP(i);
+#ifndef DISABLE_OPERATION_STATISTICS
+        recordExponent(content);
+        incrNumConv();
+#endif
+    };
+
+    explicit Dummy(long int li){                            //020-f
+        content = VFP(li);
+#ifndef DISABLE_OPERATION_STATISTICS
+        recordExponent(content);
+        incrNumConv();
+#endif
+    };
+
+    explicit Dummy(unsigned int ui){                        //021-f
+        content = VFP(ui);
+#ifndef DISABLE_OPERATION_STATISTICS
+        recordExponent(content);
+        incrNumConv();
+#endif
+    };
+
+    explicit Dummy(unsigned long int uli){              //022-f
+        content = VFP(uli);
+#ifndef DISABLE_OPERATION_STATISTICS
+        recordExponent(content);
+        incrNumConv();
+#endif
+    };
+
+    explicit Dummy(long long unsigned int llui){        //023-f
+        content = VFP(llui);
+#ifndef DISABLE_OPERATION_STATISTICS
+        recordExponent(content);
+        incrNumConv();
+#endif
+    };
+#endif //end of FIXED_POINT_FIXEDPTC
 
     operator int();                                     //024
     operator int() const;                               //025
@@ -179,8 +305,8 @@ public:
     operator unsigned long int();                       //028
     operator unsigned long long int();                  //029
     operator float();                                   //030
-    operator double();                                  //031
-    operator bool();                                    //032
+    operator bool();                                    //031
+    operator double();                                  //032
 
     /**
     operator long int() {
@@ -217,10 +343,10 @@ public:
     */
     //operator bool() {return (bool)content;};
 
-    bool operator!();                                   //033
+    void setContent(double);                            //033
     //void setContent(double d){content = d;};
-    void setContent(double);                            //034
-    double getContent();                                //035
+    double getContent();                                //034
+    bool operator!();                                   //035
     friend Dummy operator*(Dummy, Dummy);               //036
     friend Dummy operator*(Dummy, double);              //037
     friend Dummy operator*(double, Dummy);              //038
@@ -278,6 +404,7 @@ public:
     Dummy operator-=(Dummy);                            //089
     Dummy operator*=(Dummy);                            //090
     Dummy operator/=(Dummy);                            //091
+
     //The overloaded "=" methods are referenced to the following stackoverflow question:
     //https://stackoverflow.com/questions/60660058
     // /c-assign-operator-to-copy-between-volatile-and-non-volatile-instances-of-a-cla
@@ -302,7 +429,20 @@ public:
         return *this;
     }
      */
+    /**
+     * The reason for no overloaded operator= is that there are multiple cases
+     * of unnamed union that contain Dummy class, adding overloaded operator=
+     * will lead to the unions can not be initialized.
+     */
+     /*
+#ifdef VARIABLE_FLOATING_POINT_FLOATX
+    Dummy operator=(Dummy&);                      //091.5-1
+    Dummy operator=(const double);                      //091.5-2
+    //Dummy operator=(const float);                       //091.5-3
+#endif // end of VARIABLE_FLOATING_POINT_FLOATX
+      */
 };
+
 
 
 DOUBLE fabs(DOUBLE);                                    //092

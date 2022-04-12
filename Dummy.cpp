@@ -121,6 +121,8 @@ void Dummy::showAllRecords(){
  * Since the exponent is recorded at the time of initiation,
  * it doesn't need to be done for a second time.
 */
+
+
 //024
 Dummy::operator int(){
 #ifndef DISABLE_OPERATION_STATISTICS
@@ -171,18 +173,10 @@ Dummy::operator unsigned long long int(){
 
 //030
 Dummy::operator float(){
-#ifndef DISABLE_OPERATION_STATISTICS
-    incrNumConv();
-#endif
     return float(content);
 }
 
 //031
-Dummy::operator double(){
-    return content;
-}
-
-//032
 Dummy::operator bool(){
 #ifndef DISABLE_OPERATION_STATISTICS
     incrNumConv();
@@ -190,13 +184,15 @@ Dummy::operator bool(){
     return bool(content);
 }
 
-
-//033
-bool Dummy::operator!() {
-    return !content;
+/**
+ * Dummy for test purpose
+ */
+#ifdef DUMMY_IN_THE_WILDERNESS
+//032
+Dummy::operator double(){
+    return content;
 }
-
-//034
+//033
 void Dummy::setContent(double d){
 #ifndef DISABLE_OPERATION_STATISTICS
     recordExponent(d);
@@ -204,9 +200,41 @@ void Dummy::setContent(double d){
     content = d;
 }
 
-//035
+//034
 double Dummy::getContent(){
     return content;
+}
+#endif //end of DUMMY_IN_THE_WILDERNESS
+
+/**
+ *  Floatx for experimenting different floating point number format
+ */
+#ifdef VARIABLE_FLOATING_POINT_FLOATX
+//032-v
+Dummy::operator double(){
+    return double(content);
+}
+//033-v
+void Dummy::setContent(double d){
+#ifndef DISABLE_OPERATION_STATISTICS
+    recordExponent(d);
+#endif
+    content = VFP(d);
+}
+
+//034-v
+double Dummy::getContent(){
+    return content;
+}
+#endif //end of VARIABLE_FLOATING_POINT_FLOATX
+
+
+/**
+ * Need testing
+ */
+//035
+bool Dummy::operator!() {
+    return !content;
 }
 
 //036
@@ -815,9 +843,39 @@ Dummy Dummy::operator/=(Dummy d) {
 #endif
     return Dummy(content);
 }
+/*
+#ifdef VARIABLE_FLOATING_POINT_FLOATX
+//091.5-1
+Dummy Dummy::operator=(Dummy& dm){
+    content = dm.content;
+#ifndef DISABLE_OPERATION_STATISTICS
+    recordExponent(content);
+#endif
+    return *this;
+}
 
+//091.5-2
+Dummy Dummy::operator=(const double d){
+    content = VFP(d);
+#ifndef DISABLE_OPERATION_STATISTICS
+    recordExponent(content);
+#endif
+    return *this;
+}
+
+
+//091.5-3
+Dummy Dummy::operator=(const float f){
+    content = VFP(f);
+#ifndef DISABLE_OPERATION_STATISTICS
+    recordExponent(content);
+#endif
+    return *this;
+}
+
+#endif
+*/
 //092
-/** Not supported by SoftFlow **/
 DOUBLE fabs(DOUBLE a){
     return (DOUBLE)((double)fabs((double)a));
 }
@@ -940,6 +998,7 @@ DOUBLE round(DOUBLE a){
 DOUBLE abs(DOUBLE a){
     return (DOUBLE)((double)abs((double)a));
 }
+
 
 DOUBLE modf(DOUBLE para, DOUBLE* intpart) {
     double m = 0.0;
