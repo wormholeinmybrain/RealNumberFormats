@@ -10,12 +10,20 @@
 
 
 /**
+ * The following 3 definitions of preprocessing directive are used to
+ * determine which data format will be put into use, only one should
+ * be defined at a time
+ * 1.DUMMY_IN_THE_WILDERNESS, used to test the integrity of the package
+ * under C++ compiler, which in this case is g++.
+ * 2.VARIABLE_FLOATING_POINT_FLOATX, used to find out the most
+ * appropriate format of floating point number with the help of external
+ * library FloatX
+ * 3.FIXED_POINT_FIXEDPT, used to find out the most appropriate format
+ * of the fixed point number with the help of external library FIXEDPT
  * When DUMMY_IN_THE_WILDERNESS is defined, dummy class will be used
  * with a double type as single private data member
  */
 //#define DUMMY_IN_THE_WILDERNESS
-
-
 
 /**
  * When VARIABLE_FLOATING_POINT_FLOATX is defined, FloatX will substitute
@@ -44,16 +52,32 @@
 
 
 /**
- *
- * "#define VFP (flx::floatx<EXPONENT, FRACTION, double>)" should be
- * set only when floatx is used
+ * "#define VFP (flx::floatx<EXPONENT, FRACTION, double>)" should always
+ * be set
  */
-
-#ifdef VARIABLE_FLOATING_POINT_FLOATX
 #define VFP flx::floatx<EXPONENT, FRACTION, double>
 //VFP stands for variable floating point
 //#define DOUBLE (flx::floatx<EXPONENT, FRACTION, double>)
-#endif //end of VARIABLE_FLOATING_POINT_FLOATX
+
+
+#ifdef FIXED_POINT_FIXEDPTC
+//This function is only used for 64-bits
+static fixedpt double2fixed(double d1){                 //131
+    int exp;
+    double fraction = frexp(d1,&exp);
+    if((exp > (FIXEDPT_WBITS-1))||(exp < (-FIXEDPT_FBITS))) {
+        throw std::invalid_argument("floating point value outside of the range fixed-point representation");
+    }
+    long int temp = (long int)scalb(fraction,52);
+    fixedpt result = temp >> (52 - exp - FIXEDPT_FBITS);
+    return result;
+}
+//This function is only used for 64-bits
+static double fixed2double(fixedpt f1){
+    return (double) fixedpt_tofloat(f1);
+}
+#define MAX_FP_INT_PART ((FIXEDPT_WBITS>1)?((1<<(FIXEDPT_WBITS-1))-1):0)
+#endif //end of FIXED_POINT_FIXEDPTC
 
 
 class Dummy {
@@ -116,7 +140,8 @@ public:
     /**
      * Recording method for exponents
      */
-    static void recordExponent(const double);           //013
+    static void recordExponent(const double);           //013-a
+    static void recordExponent(const fixedpt);          //013-b
     static void resetExpoRecord();                      //014
     static void showExpoRecord();                       //015
 
@@ -246,55 +271,70 @@ public:
 
     Dummy(fixedpt f):content{f}{                            //018-1-f
 #ifndef DISABLE_OPERATION_STATISTICS
-        recordExponent(v);
-#endif
+        recordExponent(fixedpt_tofloat(f));
+#endif //end of DISABLE_OPERATION_STATISTICS
     }
     
-    Dummy(double d){                                        //018-f
-        content = VFP(d);
+    explicit Dummy(double d){                                        //018-f
+        content = double2fixed(d);
 #ifndef DISABLE_OPERATION_STATISTICS
         recordExponent(d);
-#endif
+#endif //end of DISABLE_OPERATION_STATISTICS
     };
 
     explicit Dummy(int i){                                  //019-f
-        content = VFP(i);
+        long int limit = ((long int)1) << FIXEDPT_WBITS;
+        if(i >= limit || i <= -limit )
+            throw std::invalid_argument("Input larger than acceptable range");
+        content = fixedpt_fromint(i);
 #ifndef DISABLE_OPERATION_STATISTICS
-        recordExponent(content);
+        recordExponent(fixedpt_tofloat(content));
         incrNumConv();
-#endif
+#endif //end of DISABLE_OPERATION_STATISTICS
     };
-
+/*
     explicit Dummy(long int li){                            //020-f
-        content = VFP(li);
+        long int limit = ((long int)1) << FIXEDPT_WBITS;
+        if(li >= limit || li <= -limit )
+            throw std::invalid_argument("Input larger than acceptable range");
+        content = fixedpt_fromint(li);
 #ifndef DISABLE_OPERATION_STATISTICS
-        recordExponent(content);
+        recordExponent(fixedpt_tofloat(content));
         incrNumConv();
-#endif
+#endif //end of DISABLE_OPERATION_STATISTICS
     };
-
+*/
     explicit Dummy(unsigned int ui){                        //021-f
-        content = VFP(ui);
+        long int limit = ((long int)1) << FIXEDPT_WBITS;
+        if(ui >= limit)
+            throw std::invalid_argument("Input larger than acceptable range");
+        content = fixedpt_fromint(ui);
 #ifndef DISABLE_OPERATION_STATISTICS
-        recordExponent(content);
+        recordExponent(fixedpt_tofloat(content));
         incrNumConv();
-#endif
+#endif //end of DISABLE_OPERATION_STATISTICS
     };
 
-    explicit Dummy(unsigned long int uli){              //022-f
-        content = VFP(uli);
+    explicit Dummy(unsigned long int uli){                  //022-f
+        long int limit = ((long int)1) << FIXEDPT_WBITS;
+        if(uli >= limit)
+            throw std::invalid_argument("Input larger than acceptable range");
+        content = fixedpt_fromint(uli);
 #ifndef DISABLE_OPERATION_STATISTICS
-        recordExponent(content);
+        recordExponent(fixedpt_tofloat(content));
         incrNumConv();
-#endif
+#endif //end of DISABLE_OPERATION_STATISTICS
     };
 
-    explicit Dummy(long long unsigned int llui){        //023-f
-        content = VFP(llui);
+    explicit Dummy(long long unsigned int llui){            //023-f
+        long int limit = ((long int)1) << FIXEDPT_WBITS;
+        if(llui>= limit)
+            throw std::invalid_argument("Input larger than acceptable range");
+        content = fixedpt_fromint(llui);
 #ifndef DISABLE_OPERATION_STATISTICS
-        recordExponent(content);
+        recordExponent(fixedpt_tofloat(content));
         incrNumConv();
-#endif
+#endif //end of DISABLE_OPERATION_STATISTICS
     };
 #endif //end of FIXED_POINT_FIXEDPTC
 
@@ -345,7 +385,13 @@ public:
 
     void setContent(double);                            //033
     //void setContent(double d){content = d;};
+#ifndef FIXED_POINT_FIXEDPTC
     double getContent();                                //034
+#endif //end of not def FIXED_POINT_FIXEDPTC
+
+#ifdef  FIXED_POINT_FIXEDPTC
+    fixedpt getContent();                               //034-f
+#endif // end of def FIXED_POINT_FIXEDPTC
     bool operator!();                                   //035
     friend Dummy operator*(Dummy, Dummy);               //036
     friend Dummy operator*(Dummy, double);              //037
@@ -489,5 +535,7 @@ bool isfinite(DOUBLE d);                                //127
 bool isnormal(DOUBLE d);                                //128
 bool isinf(DOUBLE d);                                   //129
 DOUBLE erfc(DOUBLE d);                                  //130
+
+
 
 #endif // !DUMMY_H

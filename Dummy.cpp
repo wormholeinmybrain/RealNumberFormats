@@ -1,10 +1,10 @@
 // DummyClass.cpp : Defines the entry point for the application.
 //
-#include <stdio.h>
+#include <cstdio>
 #include "Dummy.h"
 //#include <iostream>
 #include <cmath>
-#include <limits.h>
+#include <climits>
 using namespace std;
 #ifndef DISABLE_OPERATION_STATISTICS
 int Dummy::numAdd = 0;
@@ -81,10 +81,20 @@ void Dummy::showRecord() {
     printf("Number of Conversion to other data type: %i \n", numConv);
 }
 
-//013
+//013-a
 void Dummy::recordExponent(const double d){
     int i = 0;
     frexp(d,&i);
+    if(i>maxExponent)
+        maxExponent = i;
+    if(i<minExponent)
+        minExponent = i;
+}
+
+//013-b
+void Dummy::recordExponent(const fixedpt f) {
+    int i = 0;
+    frexp(fixedpt_tofloat(f),&i);
     if(i>maxExponent)
         maxExponent = i;
     if(i<minExponent)
@@ -121,8 +131,7 @@ void Dummy::showAllRecords(){
  * Since the exponent is recorded at the time of initiation,
  * it doesn't need to be done for a second time.
 */
-
-
+#ifndef FIXED_POINT_FIXEDPTC
 //024
 Dummy::operator int(){
 #ifndef DISABLE_OPERATION_STATISTICS
@@ -402,9 +411,6 @@ double& Dummy::operator~() {
 */
 //051
 Dummy operator-(Dummy d) {
-#ifndef DISABLE_OPERATION_STATISTICS
-    Dummy::incrNumAdd();
-#endif
     return Dummy(-d.getContent());
 }
 
@@ -1039,4 +1045,732 @@ bool isinf(DOUBLE d) {
 DOUBLE erfc(DOUBLE d) {
     return (DOUBLE)((double)erfc((double)d));
 }
+#endif // end of #ifndef FIXED_POINT_FIXEDPTC
+
+#ifdef FIXED_POINT_FIXEDPTC
+//024-f
+Dummy::operator int(){
+    return fixedpt_toint(content);
+}
+
+//025-f
+Dummy::operator int() const{
+    return fixedpt_toint(content);
+}
+
+//026-f
+Dummy::operator long int(){
+    return (long int)fixedpt_toint(content);
+}
+
+//027-f
+Dummy::operator unsigned int(){
+    return (unsigned int)fixedpt_abs(fixedpt_toint(content));
+}
+
+//028-f
+Dummy::operator long unsigned int(){
+    return (long unsigned int)fixedpt_abs(fixedpt_toint(content));
+}
+
+//029-f
+Dummy::operator unsigned long long int(){
+    return (unsigned long long int)fixedpt_abs(fixedpt_toint(content));
+}
+
+//030-f
+Dummy::operator float(){
+#ifndef DISABLE_OPERATION_STATISTICS
+    incrNumConv();
+#endif //end fo DISABLE_OPERATION_STATISTICS
+    return fixedpt_tofloat(content);
+}
+
+//031-f
+Dummy::operator bool(){
+    return bool(content);
+}
+
+//032-f
+Dummy::operator double(){
+    return fixed2double(content);
+}
+//033-f-a
+void Dummy::setContent(double d){
+#ifndef DISABLE_OPERATION_STATISTICS
+    incrNumConv();
+    recordExponent(d);
+#endif
+    content = double2fixed(d);
+}
+
+//034-f
+fixedpt Dummy::getContent(){
+#ifndef DISABLE_OPERATION_STATISTICS
+    incrNumConv();
+#endif
+    return content;
+}
+
+//035-f
+bool Dummy::operator!() {
+    return !content;
+}
+
+//036-f
+Dummy operator*(Dummy d1,Dummy d2 ) {
+    Dummy dum = Dummy(fixedpt_mul(d1.getContent(), d2.getContent()));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumMul();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//037-f
+Dummy operator*(Dummy dm,double d1) {
+    Dummy dum = Dummy(fixedpt_mul(dm.getContent(), double2fixed(d1)));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumConv();
+    Dummy::incrNumMul();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//038-f
+Dummy operator*(double d1, Dummy dm) {
+    Dummy dum = Dummy(fixedpt_mul(double2fixed(d1), dm.getContent()));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumConv();
+    Dummy::incrNumMul();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//039-f
+Dummy operator*(Dummy d1,long int l) {
+    Dummy dum = Dummy(double2fixed(fixed2double(d1)*double(l)));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumConv();
+    Dummy::incrNumConv();
+    Dummy::incrNumConv();
+    Dummy::incrNumMul();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//040-f
+Dummy operator*(long int l, Dummy d1) {
+    Dummy dum = Dummy(double2fixed(double(l)*fixed2double(d1)));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumConv();
+    Dummy::incrNumConv();
+    Dummy::incrNumConv();
+    Dummy::incrNumMul();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//041-f
+Dummy operator*(int i, Dummy dm) {
+    Dummy dum = Dummy(fixedpt_mul( fixedpt_fromint(i), dm.getContent()));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumMul();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//042-f
+Dummy operator*(Dummy dm, int i) {
+    Dummy dum = Dummy(fixedpt_mul( fixedpt_fromint(i), dm.getContent()));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumMul();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//043-f
+Dummy operator/(Dummy d1, Dummy d2) {
+    Dummy dum = Dummy(fixedpt_div(d1.getContent() , d2.getContent()));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumDiv();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//044-f
+Dummy operator/(long int l, Dummy dm) {
+    if(l > MAX_FP_INT_PART )
+        throw std::invalid_argument("floating point value outside of the range fixed-point representation");
+    Dummy dum = Dummy(fixedpt_div(fixedpt_fromint(l),dm.getContent()));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumDiv();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//045-f
+Dummy operator/(Dummy dm, long int l) {
+    if(l > MAX_FP_INT_PART)
+        throw std::invalid_argument("floating point value outside of the range fixed-point representation");
+    Dummy dum = Dummy(fixedpt_div(dm.getContent(), fixedpt_fromint(l)));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumDiv();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//046-f
+Dummy operator/(int i, Dummy dm) {
+    if(i > MAX_FP_INT_PART)
+        throw std::invalid_argument("floating point value outside of the range fixed-point representation");
+    Dummy dum = Dummy(fixedpt_div(fixedpt_fromint(i) , dm.getContent()));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumDiv();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//047-f
+Dummy operator/(Dummy dm, int i) {
+    if(i > MAX_FP_INT_PART)
+        throw std::invalid_argument("floating point value outside of the range fixed-point representation");
+    Dummy dum = Dummy(fixedpt_div(dm.getContent() ,fixedpt_fromint(i)));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumDiv();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+
+//048-f
+Dummy operator/(Dummy dm, double d) {
+    fixedpt pd = double2fixed(d);
+    Dummy dum = Dummy(fixedpt_div(dm.getContent() , pd));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumDiv();
+    Dummy::incrNumConv();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//049-f
+Dummy operator/(double d, Dummy dm) {
+    fixedpt pd = double2fixed(d);
+    Dummy dum = Dummy(fixedpt_div(pd,dm.getContent()));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumDiv();
+    Dummy::incrNumConv();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//050-f
+Dummy operator/(unsigned int ui, Dummy d){
+    int i;
+    if (ui <= (unsigned int)INT_MAX)
+        i = (int)ui;
+    else if (ui >= (unsigned int)INT_MIN)
+        i = -(int)~ui - 1;
+    else
+        i = INT_MIN;
+    if(i > MAX_FP_INT_PART)
+        throw std::invalid_argument("floating point value outside "
+                                    "of the range fixed-point representation");
+    Dummy dum = Dummy(fixedpt_div(fixedpt_fromint(i),d.getContent()));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumDiv();
+    Dummy::incrNumConv();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//051-f
+Dummy operator-(Dummy d) {
+    return {-d.getContent()};
+}
+
+//052-f
+Dummy operator-(Dummy d1, Dummy d2) {
+    Dummy dum = Dummy(fixedpt_sub(d1.getContent() , d2.getContent()));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//053-f
+Dummy operator-(Dummy dm, double d) {
+    Dummy dum = Dummy(fixedpt_sub(dm.getContent(), double2fixed(d)));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+    Dummy::incrNumConv();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//054-f
+Dummy operator-(Dummy d, int i) {
+    if(i > MAX_FP_INT_PART)
+        throw std::invalid_argument("floating point value outside "
+                                    "of the range fixed-point representation");
+    fixedpt f = fixedpt_sub(d.getContent(), fixedpt_fromint(i));
+    Dummy dum = Dummy(f);
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+    Dummy::incrNumConv();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//055-f
+Dummy operator-(double d, Dummy dm ) {
+    Dummy dum = Dummy(fixedpt_sub(double2fixed(d), dm.getContent()));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumConv();
+    Dummy::incrNumAdd();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//056-f
+Dummy operator-(int i, Dummy d) {
+    if(i > MAX_FP_INT_PART)
+        throw std::invalid_argument("floating point value outside "
+                                    "of the range fixed-point representation");
+    fixedpt f = fixedpt_sub(fixedpt_fromint(i),d.getContent());
+    Dummy dum = {f};
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//057-f
+Dummy operator+(Dummy d1, Dummy d2) {
+    Dummy dum = {fixedpt_add(d1.getContent(),d2.getContent())};
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//058-f
+Dummy operator+(Dummy dm, double d) {
+    Dummy dum = {fixedpt_add(dm.getContent() ,double2fixed(d))};
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+    Dummy::incrNumConv();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//059-f
+Dummy operator+(Dummy d, int i) {
+    if(i > MAX_FP_INT_PART)
+        throw std::invalid_argument("floating point value outside "
+                                    "of the range fixed-point representation");
+    fixedpt f = fixedpt_add(d.getContent(), fixedpt_fromint(i));
+    Dummy dum = {f};
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//060-f
+Dummy operator+(double d, Dummy dm) {
+    Dummy dum = {fixedpt_add(double2fixed(d),dm.getContent())};
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+    Dummy::incrNumConv();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//061-f
+Dummy operator+(int i, Dummy d) {
+    if(i > MAX_FP_INT_PART)
+        throw std::invalid_argument("floating point value outside "
+                                    "of the range fixed-point representation");
+    fixedpt f = fixedpt_add(d.getContent(), fixedpt_fromint(i));
+    Dummy dum = {f};
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+    Dummy::recordExponent(dum.getContent());
+#endif
+    return dum;
+}
+
+//062-f
+Dummy operator+(Dummy d) {
+    return d;
+}
+
+//063-f
+bool operator>=(Dummy d1, Dummy d2) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if (d1.getContent() >= d2.getContent())
+        return true;
+    else
+        return false;
+}
+
+//064-f
+bool operator>=(Dummy dm, double d) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+    Dummy::incrNumConv();
+#endif
+    if (dm.getContent() >= double2fixed(d))
+        return true;
+    else
+        return false;
+}
+
+//065-f
+bool operator>=(Dummy d, int i) {
+    if(i > MAX_FP_INT_PART)
+        throw std::invalid_argument("floating point value outside "
+                                    "of the range fixed-point representation");
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if (d.getContent() >= fixedpt_fromint(i))
+        return true;
+    else
+        return false;
+}
+
+//066-f
+bool operator>=(Dummy d, long int li) {
+    if(li > MAX_FP_INT_PART)
+        throw std::invalid_argument("floating point value outside "
+                                    "of the range fixed-point representation");
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    fixedpt dli = li << FIXEDPT_FBITS;
+    if (d.getContent() >= dli)
+        return true;
+    else
+        return false;
+}
+
+//067-f
+bool operator==(Dummy d1, Dummy d2) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if (d1.getContent() == d2.getContent())
+        return true;
+    else
+        return false;
+}
+
+//068
+bool operator==(Dummy dm, double d) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if (dm.getContent() == d)
+        return true;
+    else
+        return false;
+}
+
+//069
+bool operator==(Dummy d, int i) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+    Dummy::incrNumConv();
+#endif
+    if (d.getContent() == (double)i)
+        return true;
+    else
+        return false;
+}
+
+//070
+bool operator==(double d, Dummy dm ) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if (dm.getContent() == d)
+        return true;
+    else
+        return false;
+}
+
+//071
+bool operator<=(Dummy d1, Dummy d2) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if (d1.getContent() <= d2.getContent())
+        return true;
+    else
+        return false;
+}
+
+//072
+bool operator<=(Dummy dm, double d) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if (dm.getContent() <= d)
+        return true;
+    else
+        return false;
+}
+
+//073
+bool operator<=(Dummy d, int i) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+    Dummy::incrNumConv();
+#endif
+    if (d.getContent() <= (double)i)
+        return true;
+    else
+        return false;
+}
+
+//074
+bool operator<=(Dummy d, long int li) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+    Dummy::incrNumConv();
+#endif
+    double dli = double(li);
+    if (d.getContent() <= dli)
+        return true;
+    else
+        return false;
+}
+
+//075
+bool operator<=(double d, Dummy dm) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if (d <= dm.getContent())
+        return true;
+    else
+        return false;
+}
+
+//076
+bool operator!=(Dummy d1, Dummy d2) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if (d1.getContent() != d2.getContent())
+        return true;
+    else
+        return false;
+}
+
+//077
+bool operator!=(Dummy dm, double d ) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if (dm.getContent() != d)
+        return true;
+    else
+        return false;
+}
+
+//078
+bool operator!=(Dummy d, int i) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+    Dummy::incrNumConv();
+#endif
+    if (d.getContent() != (double)i)
+        return true;
+    else
+        return false;
+}
+
+//079
+bool operator!=(double d, Dummy dm  ) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if ( d != dm.getContent())
+        return true;
+    else
+        return false;
+}
+
+//080
+bool operator>(Dummy d1, Dummy d2) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if (d1.getContent() > d2.getContent())
+        return true;
+    else
+        return false;
+}
+
+//081
+bool operator>(double d1, Dummy d2) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if (d1 > d2.getContent())
+        return true;
+    else
+        return false;
+}
+
+//082
+bool operator>(Dummy d1, double d2) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if (d1.getContent() > d2)
+        return true;
+    else
+        return false;
+}
+
+//083
+bool operator>(Dummy d, int i) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+    Dummy::incrNumConv();
+#endif
+    double di = double(i);
+    if (d.getContent() > di)
+        return true;
+    else
+        return false;
+}
+
+//084
+bool operator<(Dummy d1, Dummy d2) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if (d1.getContent() < d2.getContent())
+        return true;
+    else
+        return false;
+}
+
+//085
+bool operator<(Dummy d1, double d2) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if (d1.getContent() < d2)
+        return true;
+    else
+        return false;
+}
+
+//086
+bool operator<(double d1, Dummy d2) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+#endif
+    if (d1 < d2.getContent())
+        return true;
+    else
+        return false;
+}
+
+//087
+bool operator<(Dummy d, int i) {
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::incrNumAdd();
+    Dummy::incrNumConv();
+#endif
+    double di = double(i);
+    if (d.getContent() < di)
+        return true;
+    else
+        return false;
+}
+
+//088
+Dummy Dummy::operator+=(Dummy d) {
+    content = content + d.content;
+#ifndef DISABLE_OPERATION_STATISTICS
+    incrNumAdd();
+    recordExponent(content);
+#endif
+    return Dummy(content);
+}
+
+//089
+Dummy Dummy::operator-=(Dummy d) {
+    content = content - d.content;
+#ifndef DISABLE_OPERATION_STATISTICS
+    incrNumAdd();
+    recordExponent(content);
+#endif
+    return Dummy(content);
+}
+
+//090
+Dummy Dummy::operator*=(Dummy d) {
+    content = content * d.content;
+#ifndef DISABLE_OPERATION_STATISTICS
+    incrNumMul();
+    recordExponent(content);
+#endif
+    return Dummy(content);
+}
+
+//091
+Dummy Dummy::operator/=(Dummy d) {
+    content = content / d.content;
+#ifndef DISABLE_OPERATION_STATISTICS
+    incrNumDiv();
+    recordExponent(content);
+#endif
+    return Dummy(content);
+}
+
+
+
+
+
+#endif //end of #ifdef FIXED_POINT_FIXEDPTC
+
 //================ end of to-do list =================
+
+
+
+
+

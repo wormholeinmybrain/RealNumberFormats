@@ -88,8 +88,12 @@ typedef	__uint128_t fixedptud;
 #error "FIXEDPT_BITS must be equal to 32 or 64"
 #endif
 
+/**
+ * The FIXEDPT_WBITS needs to be equal to or larger than 4, otherwise it will lead to integer overflow
+ * when it involves the calculation of pi.
+ */
 #ifndef FIXEDPT_WBITS
-#define FIXEDPT_WBITS	32
+#define FIXEDPT_WBITS	31
 #endif
 
 #if FIXEDPT_WBITS >= FIXEDPT_BITS

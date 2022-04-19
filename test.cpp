@@ -4,7 +4,31 @@
 #include <stdio.h>
 using namespace std;
 #define PI 3.1415926535897932354626
+/**
+ * According to NGSPICE manual, the convergence criteria are either a relative
+ * error of 0.1%, or an absolute error of 1.0e-12, whichever is larger, hence
+ * the following macro as well as the tolerance function are defined
+ */
+#define ABSOLUTE_TOLERANCE 1.0e-13;
+#define RELATIVE_TOLERANCE 1.0e-3;
 
+bool isInTolerance(double std, double actual){
+    double diff = abs(std - actual);
+    double rel = std*RELATIVE_TOLERANCE;
+    double abs_tol = ABSOLUTE_TOLERANCE;
+    if (rel >= abs_tol) {
+        if (diff >= rel)
+            return false;
+        else
+            return true;
+    }
+    else {
+        if (diff >= abs_tol)
+            return false;
+        else
+            return true;
+    }
+}
 
 int main() {
 	Dummy::showAllRecords();
@@ -186,6 +210,10 @@ int main() {
 	a7 = +a6;
 	assert(a7 == a6);
 	printf("unary addition assertion passed.\n");
+    /**
+     * The following function was for operator= overloading, since it will affect
+     * the initialization of unnamed union containing Dummy class, it's abandoned.
+     */
 	/*
 	Dummy volatile a8 = 1.1;
 	Dummy a9;
