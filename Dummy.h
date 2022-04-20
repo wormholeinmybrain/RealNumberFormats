@@ -10,12 +10,20 @@
 
 
 /**
+ * The following 3 definitions of preprocessing directive are used to
+ * determine which data format will be put into use, only one should
+ * be defined at a time
+ * 1.DUMMY_IN_THE_WILDERNESS, used to test the integrity of the package
+ * under C++ compiler, which in this case is g++.
+ * 2.VARIABLE_FLOATING_POINT_FLOATX, used to find out the most
+ * appropriate format of floating point number with the help of external
+ * library FloatX
+ * 3.FIXED_POINT_FIXEDPT, used to find out the most appropriate format
+ * of the fixed point number with the help of external library FIXEDPT
  * When DUMMY_IN_THE_WILDERNESS is defined, dummy class will be used
  * with a double type as single private data member
  */
 //#define DUMMY_IN_THE_WILDERNESS
-
-
 
 /**
  * When VARIABLE_FLOATING_POINT_FLOATX is defined, FloatX will substitute
@@ -44,17 +52,44 @@
 
 
 /**
- *
- * "#define VFP (flx::floatx<EXPONENT, FRACTION, double>)" should be
- * set only when floatx is used
+ * "#define VFP (flx::floatx<EXPONENT, FRACTION, double>)" should always
+ * be set
  */
-
-#ifdef VARIABLE_FLOATING_POINT_FLOATX
 #define VFP flx::floatx<EXPONENT, FRACTION, double>
 //VFP stands for variable floating point
 //#define DOUBLE (flx::floatx<EXPONENT, FRACTION, double>)
-#endif //end of VARIABLE_FLOATING_POINT_FLOATX
 
+
+#ifdef FIXED_POINT_FIXEDPTC
+//This function is only used for 64-bits
+static fixedpt double2fixed(double d1){                 //131
+    int exp;
+    double fraction = frexp(d1,&exp);
+    if((exp > (FIXEDPT_WBITS-1))||(exp < (-FIXEDPT_FBITS))) {
+        throw std::invalid_argument("floating point value outside of the range fixed-point representation");
+    }
+    long int temp = (long int)scalb(fraction,52);
+    fixedpt result = temp >> (52 - exp - FIXEDPT_FBITS);
+    return result;
+}
+//This function is only used for 64-bits
+static double fixed2double(fixedpt f1){
+    return (double) fixedpt_tofloat(f1);
+}
+#define MAX_FP_INT_PART ((FIXEDPT_WBITS>1)?((1<<(FIXEDPT_WBITS-1))-1):0)
+#endif //end of FIXED_POINT_FIXEDPTC
+
+/**
+ * According to NGSPICE manual, the convergence criteria are either a relative
+ * error of 0.1%, or an absolute error of 1.0e-12, whichever is larger, hence
+ * the following macro as well as the tolerance function are defined
+ */
+#ifndef ABSOLUTE_TOLERANCE
+const double ABSOLUTE_TOLERANCE = 0.5e-12;
+#endif
+#ifndef RELATIVE_TOLERANCE
+const double RELATIVE_TOLERANCE = 0.5e-3;
+#endif
 
 class Dummy {
 #ifdef  DUMMY_IN_THE_WILDERNESS
@@ -87,6 +122,7 @@ private:
     static int numMul;
     static int numDiv;
     static int numConv;
+    static int numElem;
     /**
      * Cleaning records of operations
      */
@@ -94,6 +130,7 @@ private:
     static void clearMul();                             //002
     static void clearDiv();                             //003
     static void clearConv();                            //004
+    static void clearElem();                            //004-1
     /**
      * Cleaning record of exponent
      */
@@ -111,12 +148,15 @@ public:
     static void incrNumMul();                           //008
     static void incrNumDiv();                           //009
     static void incrNumConv();                          //010
+    static void incrNumElem();                          //010-1
+
     static void resetRecord();                          //011
     static void showRecord();                           //012
     /**
      * Recording method for exponents
      */
-    static void recordExponent(const double);           //013
+    static void recordExponent(const double);           //013-a
+    static void recordExponent(const fixedpt);          //013-b
     static void resetExpoRecord();                      //014
     static void showExpoRecord();                       //015
 
@@ -246,55 +286,70 @@ public:
 
     Dummy(fixedpt f):content{f}{                            //018-1-f
 #ifndef DISABLE_OPERATION_STATISTICS
-        recordExponent(v);
-#endif
+        recordExponent(fixedpt_tofloat(f));
+#endif //end of DISABLE_OPERATION_STATISTICS
     }
     
-    Dummy(double d){                                        //018-f
-        content = VFP(d);
+    explicit Dummy(double d){                                        //018-f
+        content = double2fixed(d);
 #ifndef DISABLE_OPERATION_STATISTICS
         recordExponent(d);
-#endif
+#endif //end of DISABLE_OPERATION_STATISTICS
     };
 
     explicit Dummy(int i){                                  //019-f
-        content = VFP(i);
+        long int limit = ((long int)1) << FIXEDPT_WBITS;
+        if(i >= limit || i <= -limit )
+            throw std::invalid_argument("Input larger than acceptable range");
+        content = fixedpt_fromint(i);
 #ifndef DISABLE_OPERATION_STATISTICS
-        recordExponent(content);
+        recordExponent(fixedpt_tofloat(content));
         incrNumConv();
-#endif
+#endif //end of DISABLE_OPERATION_STATISTICS
     };
-
+/*
     explicit Dummy(long int li){                            //020-f
-        content = VFP(li);
+        long int limit = ((long int)1) << FIXEDPT_WBITS;
+        if(li >= limit || li <= -limit )
+            throw std::invalid_argument("Input larger than acceptable range");
+        content = fixedpt_fromint(li);
 #ifndef DISABLE_OPERATION_STATISTICS
-        recordExponent(content);
+        recordExponent(fixedpt_tofloat(content));
         incrNumConv();
-#endif
+#endif //end of DISABLE_OPERATION_STATISTICS
     };
-
+*/
     explicit Dummy(unsigned int ui){                        //021-f
-        content = VFP(ui);
+        long int limit = ((long int)1) << FIXEDPT_WBITS;
+        if(ui >= limit)
+            throw std::invalid_argument("Input larger than acceptable range");
+        content = fixedpt_fromint(ui);
 #ifndef DISABLE_OPERATION_STATISTICS
-        recordExponent(content);
+        recordExponent(fixedpt_tofloat(content));
         incrNumConv();
-#endif
+#endif //end of DISABLE_OPERATION_STATISTICS
     };
 
-    explicit Dummy(unsigned long int uli){              //022-f
-        content = VFP(uli);
+    explicit Dummy(unsigned long int uli){                  //022-f
+        long int limit = ((long int)1) << FIXEDPT_WBITS;
+        if(uli >= limit)
+            throw std::invalid_argument("Input larger than acceptable range");
+        content = fixedpt_fromint(uli);
 #ifndef DISABLE_OPERATION_STATISTICS
-        recordExponent(content);
+        recordExponent(fixedpt_tofloat(content));
         incrNumConv();
-#endif
+#endif //end of DISABLE_OPERATION_STATISTICS
     };
 
-    explicit Dummy(long long unsigned int llui){        //023-f
-        content = VFP(llui);
+    explicit Dummy(long long unsigned int llui){            //023-f
+        long int limit = ((long int)1) << FIXEDPT_WBITS;
+        if(llui>= limit)
+            throw std::invalid_argument("Input larger than acceptable range");
+        content = fixedpt_fromint(llui);
 #ifndef DISABLE_OPERATION_STATISTICS
-        recordExponent(content);
+        recordExponent(fixedpt_tofloat(content));
         incrNumConv();
-#endif
+#endif //end of DISABLE_OPERATION_STATISTICS
     };
 #endif //end of FIXED_POINT_FIXEDPTC
 
@@ -345,7 +400,13 @@ public:
 
     void setContent(double);                            //033
     //void setContent(double d){content = d;};
+#ifndef FIXED_POINT_FIXEDPTC
     double getContent();                                //034
+#endif //end of not def FIXED_POINT_FIXEDPTC
+
+#ifdef  FIXED_POINT_FIXEDPTC
+    fixedpt getContent();                               //034-f
+#endif // end of def FIXED_POINT_FIXEDPTC
     bool operator!();                                   //035
     friend Dummy operator*(Dummy, Dummy);               //036
     friend Dummy operator*(Dummy, double);              //037
@@ -443,51 +504,53 @@ public:
       */
 };
 
-
-
-DOUBLE fabs(DOUBLE);                                    //092
-DOUBLE atan2(DOUBLE,DOUBLE);                            //093
-DOUBLE floor(DOUBLE);                                   //094
-DOUBLE log10(DOUBLE);                                   //095
-DOUBLE hypot(DOUBLE,DOUBLE);                            //096
-DOUBLE log(DOUBLE);                                     //097
-DOUBLE exp(DOUBLE);                                     //098
+/**
+ * Elementary Functions
+ */
+DOUBLE acos(DOUBLE);                                    //092
+DOUBLE acosh(DOUBLE);                                   //093
+DOUBLE asin(DOUBLE);                                    //094
+DOUBLE asinh(DOUBLE);                                   //095
+DOUBLE atan(DOUBLE);                                    //096
+DOUBLE atan2(DOUBLE,DOUBLE);                            //097
+DOUBLE atanh(DOUBLE);                                   //098
 DOUBLE cos(DOUBLE);                                     //099
-DOUBLE sin(DOUBLE);                                     //100
-DOUBLE cosh(DOUBLE);                                    //101
-DOUBLE sinh(DOUBLE);                                    //102
-DOUBLE tan(DOUBLE);                                     //103
-DOUBLE tanh(DOUBLE);                                    //104
-DOUBLE atan(DOUBLE);                                    //105
-DOUBLE ceil(DOUBLE);                                    //106
-DOUBLE nearbyint(DOUBLE);                               //107
-DOUBLE pow(DOUBLE,DOUBLE);                              //108
-DOUBLE pow(double,DOUBLE);                              //109
-DOUBLE pow(DOUBLE,double);                              //110
+DOUBLE cosh(DOUBLE);                                    //100
+DOUBLE exp(DOUBLE);                                     //101
+DOUBLE hypot(DOUBLE,DOUBLE);                            //102
+DOUBLE log(DOUBLE);                                     //103
+DOUBLE logb(DOUBLE);                                    //104
+DOUBLE log10(DOUBLE);                                   //105
+DOUBLE pow(DOUBLE,DOUBLE);                              //106
+DOUBLE pow(double,DOUBLE);                              //107
+DOUBLE pow(DOUBLE,double);                              //108
+DOUBLE sin(DOUBLE);                                     //109
+DOUBLE sinh(DOUBLE);                                    //110
 DOUBLE sqrt(DOUBLE);                                    //111
-DOUBLE isnan(DOUBLE);                                   //112
-DOUBLE logb(DOUBLE);                                    //113
-DOUBLE scalbn(DOUBLE,int);                              //114
-DOUBLE asin(DOUBLE);                                    //115
-DOUBLE acos(DOUBLE);                                    //116
-DOUBLE trunc(DOUBLE);                                   //117
-DOUBLE atanh(DOUBLE);                                   //118
-DOUBLE acosh(DOUBLE);                                   //119
-DOUBLE asinh(DOUBLE);                                   //120
-DOUBLE round(DOUBLE);                                   //121
-DOUBLE abs(DOUBLE);                                     //122
-DOUBLE modf(DOUBLE, DOUBLE*);                           //123
-DOUBLE modf(double, DOUBLE*);                           //124
+DOUBLE tan(DOUBLE);                                     //112
+DOUBLE tanh(DOUBLE);                                    //113
 
 
+DOUBLE abs(DOUBLE);                                     //114
+DOUBLE ceil(DOUBLE);                                    //115
+DOUBLE fabs(DOUBLE);                                    //116
+DOUBLE floor(DOUBLE);                                   //117
+DOUBLE frexp(DOUBLE r, int* exp);                       //118
+DOUBLE isnan(DOUBLE);                                   //119
+DOUBLE modf(DOUBLE, DOUBLE*);                           //120
+DOUBLE modf(double, DOUBLE*);                           //121
+DOUBLE nearbyint(DOUBLE);                               //122
+DOUBLE round(DOUBLE);                                   //123
+DOUBLE scalbn(DOUBLE,int);                              //124
+DOUBLE trunc(DOUBLE);                                   //125
 
 
-
-DOUBLE frexp(DOUBLE r, int* exp);                       //125
 int fpclassify(DOUBLE d);                               //126
 bool isfinite(DOUBLE d);                                //127
 bool isnormal(DOUBLE d);                                //128
 bool isinf(DOUBLE d);                                   //129
 DOUBLE erfc(DOUBLE d);                                  //130
+
+
 
 #endif // !DUMMY_H
