@@ -2,6 +2,8 @@
 #pragma ide diagnostic ignored "modernize-use-auto"
 // DummyClass.cpp : Defines the entry point for the application.
 //
+#include<iostream>
+
 #include <cstdio>
 #include "Dummy.h"
 #include <cmath>
@@ -15,6 +17,32 @@ int Dummy::numConv = 0;
 int Dummy::numElem = 0;
 int Dummy::maxExponent = INT_MIN;
 int Dummy::minExponent = INT_MAX;
+
+bool withinTolerance(double std, double actual){
+    double diff = fabs(std - actual);
+    double rel_tol = fabs(std)*RELATIVE_TOLERANCE;
+    double abs_tol = ABSOLUTE_TOLERANCE;
+#ifdef IS_DEBUG
+    cout << "diff: " << diff << endl;
+    cout << "rel: " << rel << endl;
+    cout << "abs_tol: " << abs_tol << endl;
+#endif
+    if (rel_tol >= abs_tol) {
+#ifdef IS_DEBUG
+        cout << "rel >= abs_tol." << endl;
+#endif
+        if (diff >= rel_tol)
+            return false;
+        else
+            return true;
+    }
+    else {
+        if (diff >= abs_tol)
+            return false;
+        else
+            return true;
+    }
+}
 
 //001
 void Dummy::clearAdd() {
@@ -72,7 +100,7 @@ void Dummy::incrNumConv(){
 }
 
 void Dummy::incrNumElem(){
-    numConv++;
+    numElem++;
 }
 
 //011
@@ -91,7 +119,7 @@ void Dummy::showRecord() {
     printf("Number of Multiplication: %i \n", numMul);
     printf("Number of Division: %i \n", numDiv);
     printf("Number of Conversion to other data type: %i \n", numConv);
-    printf("Number of Conversion to other data type: %i \n", numElem);
+    printf("Number of Elementary Calculation: %i \n", numElem);
 }
 
 //013-a
@@ -1229,6 +1257,9 @@ Dummy::operator bool() {
 
 //032-f
 Dummy::operator double(){
+#ifndef DISABLE_OPERATION_STATISTICS
+    incrNumConv();
+#endif //end fo DISABLE_OPERATION_STATISTICS
     return fixed2double(content);
 }
 //033-f-a
@@ -1242,9 +1273,6 @@ void Dummy::setContent(double d){
 
 //034-f
 fixedpt Dummy::getContent(){
-#ifndef DISABLE_OPERATION_STATISTICS
-    incrNumConv();
-#endif
     return content;
 }
 
@@ -1630,14 +1658,16 @@ bool operator==(Dummy d1, Dummy d2) {
 }
 
 //068-f
-
 bool operator==(Dummy dm, double d) {
 #ifndef DISABLE_OPERATION_STATISTICS
     Dummy::incrNumAdd();
     Dummy::incrNumConv();
 #endif
-    double absTol = ABSOLUTE_TOLERANCE;
-    if (abs(fixed2double(dm.getContent()) - d)<=absTol)
+    /*
+    double relTol = RELATIVE_TOLERANCE;
+    if (fabs(fixed2double(dm.getContent()) - d)<=(fabs(d)*relTol))
+     */
+    if(withinTolerance(d, (double)dm))
         return true;
     else
         return false;
@@ -1651,7 +1681,7 @@ bool operator==(Dummy d, int i) {
 #ifndef DISABLE_OPERATION_STATISTICS
     Dummy::incrNumAdd();
 #endif
-    if ((fixedpt_toint(d.getContent())==i)&&((d.getContent() & FIXEDPT_FMASK)!=0))
+    if ((fixedpt_toint(d.getContent())==i)&&((d.getContent() & FIXEDPT_FMASK)==0))
         return true;
     else
         return false;
@@ -1663,8 +1693,7 @@ bool operator==(double d, Dummy dm ) {
     Dummy::incrNumAdd();
     Dummy::incrNumConv();
 #endif
-    double absTol = ABSOLUTE_TOLERANCE;
-    if (abs(fixed2double(dm.getContent()) - d)<=absTol)
+    if(withinTolerance(d, (double)dm))
         return true;
     else
         return false;
@@ -1763,8 +1792,7 @@ bool operator!=(Dummy dm, double d ) {
     Dummy::incrNumAdd();
     Dummy::incrNumConv();
 #endif
-    double absTol = ABSOLUTE_TOLERANCE;
-    if (abs(fixed2double(dm.getContent())-d)<(absTol))
+    if (!withinTolerance((double)dm,d))
         return true;
     else
         return false;
@@ -1776,9 +1804,9 @@ bool operator!=(Dummy d, int i) {
     Dummy::incrNumAdd();
 #endif
     if ((fixedpt_toint(d.getContent())==i)&&(d.getContent()&FIXEDPT_FMASK)==0)
-        return true;
-    else
         return false;
+    else
+        return true;
 }
 
 //079-f
@@ -1787,8 +1815,7 @@ bool operator!=(double d, Dummy dm  ) {
     Dummy::incrNumAdd();
     Dummy::incrNumConv();
 #endif
-    double absTol = ABSOLUTE_TOLERANCE;
-    if ((abs(fixed2double(dm.getContent()))-d)<(absTol))
+    if (!withinTolerance(d,(double)dm))
         return true;
     else
         return false;
@@ -2171,9 +2198,11 @@ DOUBLE abs(DOUBLE a) {
 
 //116-f
 DOUBLE ceil(DOUBLE a){
-    fixedpt fa = (a.getContent()>0)
-                  ? (a.getContent()&(~FIXEDPT_FMASK)) + fixedpt_fromint(1)
-                  : (a.getContent()&(~FIXEDPT_FMASK));
+    fixedpt fa;
+    if((a.getContent() & FIXEDPT_FMASK) != 0)
+        fa = (a.getContent()&(~FIXEDPT_FMASK)) + fixedpt_fromint(1);
+    else
+        fa = a.getContent();
 #ifndef DISABLE_OPERATION_STATISTICS
     Dummy::recordExponent(fa);
 #endif
@@ -2191,9 +2220,11 @@ DOUBLE fabs(DOUBLE a){
 
 //118-f
 DOUBLE floor(DOUBLE a){
-    fixedpt fa = (a.getContent()>0)
-                 ? (a.getContent()&(~FIXEDPT_FMASK))
-                 : (a.getContent()&(~FIXEDPT_FMASK)) - fixedpt_fromint(1);
+    fixedpt fa;
+    if((a.getContent() & FIXEDPT_FMASK) != 0)
+        fa = (a.getContent() & (~FIXEDPT_FMASK));
+    else
+        fa = a.getContent();
 #ifndef DISABLE_OPERATION_STATISTICS
     Dummy::recordExponent(fa);
 #endif
@@ -2208,9 +2239,9 @@ DOUBLE frexp(DOUBLE r, int* exp) {
 //120-f
 DOUBLE modf(DOUBLE d1 , DOUBLE* intpart){
     fixedpt input = d1.getContent();
-    fixedpt fragpart = input&FIXEDPT_FMASK;
+    fixedpt fracpart = input&FIXEDPT_FMASK;
     *intpart = input&(~(FIXEDPT_FMASK));
-    return {fragpart};
+    return {fracpart};
 }
 
 //121-f
@@ -2219,72 +2250,29 @@ DOUBLE modf(double d, DOUBLE* intpart){
     Dummy::recordExponent(d);
 #endif
     fixedpt input = double2fixed(d);
-    fixedpt fragpart = input&FIXEDPT_FMASK;
+    fixedpt fracpart = input&FIXEDPT_FMASK;
     *intpart = input&(~(FIXEDPT_FMASK));
-    return {fragpart};
-}
-
-//122-f
-DOUBLE nearbyint(DOUBLE a){
-#if defined(FE_DOWNWARD)
-    fixedpt fa = a > 0
-                 ? (a.getContent()&(~FIXEDPT_FMASK))
-                 : (a.getContent()&(~FIXEDPT_FMASK)) - fixedpt_fromint(1);
-#elif defined(FE_TOWARDZERO)
-    fixedpt fa = a.getContent()&(~FIXEDPT_FMASK);
-#elif defined(FE_UPWARD)
-    fixedpt fa = a > 0
-                 ? (a.getContent()&(~FIXEDPT_FMASK)) + fixedpt_fromint(1)
-                 : (a.getContent()&(~FIXEDPT_FMASK));
-#elif defined(FE_TONEAREST)
-    fixedpt fa = a.getContent();
-    if(fa > 0){
-        if((fa&(fixedpt(1)<<(FIXEDPT_FBITS-1)))!=0)
-            fa = (fa & (~FIXEDPT_FMASK)) + ((fixedpt)1<<FIXEDPT_FBITS);
-        else
-            fa = fa & (~FIXEDPT_FMASK);
-    }
-    else{
-        if((fa&(fixedpt(1)<<(FIXEDPT_FBITS-1)))!=0)
-            fa = (fa & (~FIXEDPT_FMASK)) -  ((fixedpt)1<<FIXEDPT_FBITS);
-        else
-            fa = fa & (~FIXEDPT_FMASK);
-    }
-#else
-    fixedpt fa = a.getContent();
-    if(fa > 0){
-        if((fa&(fixedpt(1)<<(FIXEDPT_FBITS-1)))!=0)
-            fa = (fa & (~FIXEDPT_FMASK)) + fixedpt_fromint(1);
-        else
-            fa = fa & (~FIXEDPT_FMASK);
-    }
-    else{
-        if((fa&(fixedpt(1)<<(FIXEDPT_FBITS-1)))!=0)
-            fa = (fa & (~FIXEDPT_FMASK)) -  fixedpt_fromint(1);
-        else
-            fa = fa & (~FIXEDPT_FMASK);
-    }
-#endif //end of FE_ macros
-#ifndef DISABLE_OPERATION_STATISTICS
-    Dummy::recordExponent(fa);
-#endif
-    return {fa};
+    return {fracpart};
 }
 
 //123-f
 DOUBLE round(DOUBLE a){
-    fixedpt fa = a.getContent();
-    if(fa > 0){
-        if((fa&(fixedpt(1)<<(FIXEDPT_FBITS-1)))!=0)
-            fa = (fa & (~FIXEDPT_FMASK)) + fixedpt_fromint(1);
+    fixedpt fa ;
+    if(a.getContent() >= 0){
+        if((a.getContent() & (fixedpt(1)<<(FIXEDPT_FBITS-1)))!=0) //check for the bit of 2^(-1)=0.5
+            fa =  (a.getContent() & (~FIXEDPT_FMASK)) + fixedpt_fromint(1);
         else
-            fa = fa & (~FIXEDPT_FMASK);
+            fa = a.getContent() & (~FIXEDPT_FMASK);
     }
     else{
-        if((fa&(fixedpt(1)<<(FIXEDPT_FBITS-1)))!=0)
-            fa = (fa & (~FIXEDPT_FMASK)) - fixedpt_fracpart(1);
-        else
-            fa = fa & (~FIXEDPT_FMASK);
+        if(((-a.getContent()) & (fixedpt(1)<<(FIXEDPT_FBITS-1)))!=0)
+            fa =  (a.getContent() & (~FIXEDPT_FMASK)) ;
+        else {
+            if(((-a.getContent()) & FIXEDPT_FMASK) == 0)
+                fa = a.getContent();
+            else
+                fa = (fixedpt) (a.getContent() & (~FIXEDPT_FMASK)) + fixedpt_fromint(1);
+        }
     }
 #ifndef DISABLE_OPERATION_STATISTICS
     Dummy::recordExponent(fa);
@@ -2294,12 +2282,52 @@ DOUBLE round(DOUBLE a){
 
 //124-f (?)
 DOUBLE scalbn(DOUBLE a ,int i){
-    return (a.getContent() << i);
+    fixedpt fa = (i >= 0 ? (a.getContent() << i)
+                        : ( a.getContent() >> -i));
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::recordExponent(fa);
+#endif
+    return {fa};
 }
 
 //125-f
 DOUBLE trunc(DOUBLE a){
-    return {a.getContent()&(~FIXEDPT_FMASK)};
+    fixedpt fa;
+    if(a.getContent()>=0)
+        fa = a.getContent()&(~FIXEDPT_FMASK);
+    else{
+        if((-a.getContent() & FIXEDPT_FMASK) == 0)
+            fa = a.getContent();
+        else
+            fa = (a.getContent()&(~FIXEDPT_FMASK)) + fixedpt_fromint(1);
+    }
+    return {fa};
+}
+
+//122-f
+/**
+ * The default output of the original function is a little bit weird
+ * nearbyint() has generally the same outputs as round() without any
+ * corresponding macro definition, however in one case -0.5 its output
+ * will be '-0', by which the round() will output "-1"
+ */
+DOUBLE nearbyint(DOUBLE a){
+    fixedpt fa;
+#if defined(FE_DOWNWARD)
+    fa = floor(a);
+#elif defined(FE_TOWARDZERO)
+    fa = trunc(a);
+#elif defined(FE_UPWARD)
+    fa = ceil(a);
+#elif defined(FE_TONEAREST)
+    fa = round(a);
+#else
+    fa = round(a);
+#endif //end of FE_ macros
+#ifndef DISABLE_OPERATION_STATISTICS
+    Dummy::recordExponent(fa);
+#endif
+    return {fa};
 }
 
 //126-f
@@ -2326,7 +2354,6 @@ bool isnormal(DOUBLE d){
 bool isinf(DOUBLE d) {
     return isinf((double)d);
 }
-
 
 
 #endif //end of #ifdef FIXED_POINT_FIXEDPTC

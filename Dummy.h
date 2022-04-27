@@ -82,7 +82,9 @@ static double fixed2double(fixedpt f1){
 /**
  * According to NGSPICE manual, the convergence criteria are either a relative
  * error of 0.1%, or an absolute error of 1.0e-12, whichever is larger, hence
- * the following macro as well as the tolerance function are defined
+ * the following macro as well as the tolerance function are defined, already
+ * used "grep -r 'ABSOLUTE_TOLERANCE'" and "grep -r 'RELATIVE_TOLERANCE'" to
+ * assure no such variable is named in original version of NGSPICE.
  */
 #ifndef ABSOLUTE_TOLERANCE
 const double ABSOLUTE_TOLERANCE = 0.5e-12;
@@ -90,6 +92,7 @@ const double ABSOLUTE_TOLERANCE = 0.5e-12;
 #ifndef RELATIVE_TOLERANCE
 const double RELATIVE_TOLERANCE = 0.5e-3;
 #endif
+
 
 class Dummy {
 #ifdef  DUMMY_IN_THE_WILDERNESS
@@ -530,22 +533,26 @@ DOUBLE sqrt(DOUBLE);                                    //111
 DOUBLE tan(DOUBLE);                                     //112
 DOUBLE tanh(DOUBLE);                                    //113
 
-
+/**
+ * absolute value, rounding and remainder functions
+ */
 DOUBLE abs(DOUBLE);                                     //114
 DOUBLE ceil(DOUBLE);                                    //115
 DOUBLE fabs(DOUBLE);                                    //116
 DOUBLE floor(DOUBLE);                                   //117
 DOUBLE frexp(DOUBLE r, int* exp);                       //118
-DOUBLE isnan(DOUBLE);                                   //119
-DOUBLE modf(DOUBLE, DOUBLE*);                           //120
-DOUBLE modf(double, DOUBLE*);                           //121
-DOUBLE nearbyint(DOUBLE);                               //122
-DOUBLE round(DOUBLE);                                   //123
-DOUBLE scalbn(DOUBLE,int);                              //124
-DOUBLE trunc(DOUBLE);                                   //125
+DOUBLE modf(DOUBLE, DOUBLE*);                           //119
+DOUBLE modf(double, DOUBLE*);                           //120
+DOUBLE nearbyint(DOUBLE);                               //121
+DOUBLE round(DOUBLE);                                   //122
+DOUBLE scalbn(DOUBLE,int);                              //123
+DOUBLE trunc(DOUBLE);                                   //124
 
-
-int fpclassify(DOUBLE d);                               //126
+/**
+ * Macro Function
+ */
+int fpclassify(DOUBLE d);                               //125
+DOUBLE isnan(DOUBLE);                                   //126
 bool isfinite(DOUBLE d);                                //127
 bool isnormal(DOUBLE d);                                //128
 bool isinf(DOUBLE d);                                   //129
