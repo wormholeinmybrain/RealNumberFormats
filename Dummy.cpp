@@ -445,11 +445,7 @@ Dummy operator/(unsigned int ui, Dummy d){
 #endif
     return dum;
 }
-/*
-double& Dummy::operator~() {
-    return content;
-}
-*/
+
 //051
 Dummy operator-(Dummy d) {
     return Dummy(-d.getContent());
@@ -616,10 +612,18 @@ bool operator==(Dummy d1, Dummy d2) {
 #ifndef DISABLE_OPERATION_STATISTICS
     Dummy::incrNumAdd();
 #endif
+#if (defined(VARIABLE_FLOATING_POINT_FLOATX) && (FLOAFLOATX_FRACTION == 52)) \
+    || (defined(DUMMY_IN_THE_WILDERNESS))
     if (d1.getContent() == d2.getContent())
         return true;
     else
         return false;
+#elif defined(VARIABLE_FLOATING_POINT_FLOATX) && (FRACTION < 52)
+    if(withinTolerance(d1.getContent(),d2.getContent()))
+        return true;
+    else
+        return false;
+#endif
 }
 
 //068
@@ -627,10 +631,18 @@ bool operator==(Dummy dm, double d) {
 #ifndef DISABLE_OPERATION_STATISTICS
     Dummy::incrNumAdd();
 #endif
+#if (defined(VARIABLE_FLOATING_POINT_FLOATX) && (FLOAFLOATX_FRACTION == 52)) \
+    || (defined(DUMMY_IN_THE_WILDERNESS))
     if (dm.getContent() == d)
         return true;
     else
         return false;
+#elif defined(VARIABLE_FLOATING_POINT_FLOATX) && (FRACTION < 52)
+    if(withinTolerance(d, dm.getContent()))
+        return true;
+    else
+        return false;
+#endif
 }
 
 //069
@@ -639,10 +651,18 @@ bool operator==(Dummy d, int i) {
     Dummy::incrNumAdd();
     Dummy::incrNumConv();
 #endif
+#if (defined(VARIABLE_FLOATING_POINT_FLOATX) && (FLOAFLOATX_FRACTION == 52)) \
+    || (defined(DUMMY_IN_THE_WILDERNESS))
     if (d.getContent() == (double)i)
         return true;
     else
         return false;
+#elif defined(VARIABLE_FLOATING_POINT_FLOATX) && (FRACTION < 52)
+    if(withinTolerance((double)i, dm.getContent()))
+        return true;
+    else
+        return false;
+#endif
 }
 
 //070
@@ -650,10 +670,18 @@ bool operator==(double d, Dummy dm ) {
 #ifndef DISABLE_OPERATION_STATISTICS
     Dummy::incrNumAdd();
 #endif
+#if (defined(VARIABLE_FLOATING_POINT_FLOATX) && (FLOAFLOATX_FRACTION == 52)) \
+    || (defined(DUMMY_IN_THE_WILDERNESS))
     if (dm.getContent() == d)
         return true;
     else
         return false;
+#elif defined(VARIABLE_FLOATING_POINT_FLOATX) && (FRACTION < 52)
+    if(withinTolerance(d, dm.getContent()))
+        return true;
+    else
+        return false;
+#endif
 }
 
 //071
@@ -719,10 +747,18 @@ bool operator!=(Dummy d1, Dummy d2) {
 #ifndef DISABLE_OPERATION_STATISTICS
     Dummy::incrNumAdd();
 #endif
+#if (defined(VARIABLE_FLOATING_POINT_FLOATX) && (FLOAFLOATX_FRACTION == 52)) \
+    || (defined(DUMMY_IN_THE_WILDERNESS))
     if (d1.getContent() != d2.getContent())
         return true;
     else
         return false;
+#elif defined(VARIABLE_FLOATING_POINT_FLOATX) && (FRACTION < 52)
+    if(!withinTolerance(d, dm.getContent()))
+        return true;
+    else
+        return false;
+#endif
 }
 
 //077
@@ -730,10 +766,18 @@ bool operator!=(Dummy dm, double d ) {
 #ifndef DISABLE_OPERATION_STATISTICS
     Dummy::incrNumAdd();
 #endif
+#if (defined(VARIABLE_FLOATING_POINT_FLOATX) && (FLOAFLOATX_FRACTION == 52)) \
+    || (defined(DUMMY_IN_THE_WILDERNESS))
     if (dm.getContent() != d)
         return true;
     else
         return false;
+#elif defined(VARIABLE_FLOATING_POINT_FLOATX) && (FRACTION < 52)
+    if(!withinTolerance(d, dm.getContent()))
+        return true;
+    else
+        return false;
+#endif
 }
 
 //078
@@ -742,10 +786,18 @@ bool operator!=(Dummy d, int i) {
     Dummy::incrNumAdd();
     Dummy::incrNumConv();
 #endif
+#if (defined(VARIABLE_FLOATING_POINT_FLOATX) && (FLOAFLOATX_FRACTION == 52)) \
+    || (defined(DUMMY_IN_THE_WILDERNESS))
     if (d.getContent() != (double)i)
         return true;
     else
         return false;
+#elif defined(VARIABLE_FLOATING_POINT_FLOATX) && (FRACTION < 52)
+    if(!withinTolerance(double(i), dm.getContent()))
+        return true;
+    else
+        return false;
+#endif
 }
 
 //079
@@ -753,10 +805,18 @@ bool operator!=(double d, Dummy dm  ) {
 #ifndef DISABLE_OPERATION_STATISTICS
     Dummy::incrNumAdd();
 #endif
+#if (defined(VARIABLE_FLOATING_POINT_FLOATX) && (FLOAFLOATX_FRACTION == 52)) \
+    || (defined(DUMMY_IN_THE_WILDERNESS))
     if ( d != dm.getContent())
         return true;
     else
         return false;
+#elif defined(VARIABLE_FLOATING_POINT_FLOATX) && (FRACTION < 52)
+    if(!withinTolerance(d, dm.getContent()))
+        return true;
+    else
+        return false;
+#endif
 }
 
 //080
@@ -2282,6 +2342,9 @@ DOUBLE round(DOUBLE a){
 
 //124-f (?)
 DOUBLE scalbn(DOUBLE a ,int i){
+    int64_t mask = ~(((int64_t)1 << (63-i))-1);
+    if(a.getContent()&mask)
+        throw std::invalid_argument("left shift count >= width of the type");
     fixedpt fa = (i >= 0 ? (a.getContent() << i)
                         : ( a.getContent() >> -i));
 #ifndef DISABLE_OPERATION_STATISTICS

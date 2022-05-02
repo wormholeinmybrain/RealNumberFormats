@@ -41,9 +41,9 @@
  * Change EXPONENT to change the double precision floating point number
  * format
  */
-#define AVAILABLE_BITS  63
-#define EXPONENT        11
-#define FRACTION        (AVAILABLE_BITS-EXPONENT)
+#define FLOATX_AVAILABLE_BITS  63
+#define FLOATX_EXPONENT        11
+#define FLOATX_FRACTION        52
 /**
  * Dummy will be used as a host of different arithmetical core components
  * and therefore should always be defined.
@@ -55,7 +55,7 @@
  * "#define VFP (flx::floatx<EXPONENT, FRACTION, double>)" should always
  * be set
  */
-#define VFP flx::floatx<EXPONENT, FRACTION, double>
+#define VFP flx::floatx<FLOATX_EXPONENT, FLOATX_FRACTION , double>
 //VFP stands for variable floating point
 //#define DOUBLE (flx::floatx<EXPONENT, FRACTION, double>)
 
@@ -74,7 +74,7 @@ static fixedpt double2fixed(double d1){                 //131
 }
 //This function is only used for 64-bits
 static double fixed2double(fixedpt f1){
-    return (double) fixedpt_tofloat(f1);
+    return ((double) ((f1)*((double)(1)/(double)(1L << FIXEDPT_FBITS))));
 }
 #define MAX_FP_INT_PART ((FIXEDPT_WBITS>1)?((1<<(FIXEDPT_WBITS-1))-1):0)
 #endif //end of FIXED_POINT_FIXEDPTC
