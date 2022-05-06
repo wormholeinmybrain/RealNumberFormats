@@ -7,7 +7,15 @@
 #define DUMMY_H
 #include "floatx.hpp"
 #include "fixedptc.h"
-
+/**
+ * The following definition is for the script to modify the path of
+ * operation data record storage. Default is $HOME/$(data_format)_$
+ * (data_format_setting01)_$(data_format_setting02). For example,
+ * the result of the format FLOATX with 22 digits for fraction and
+ * 6 digits for exponent would be FLOATX_22_7; The record for the
+ * format FIXEDPT with 30 digits for fraction will be FIXEDPT_30
+ */
+#define LAU_RECORD_PATH = "$HOME/Dummy.txt"
 
 /**
  * The following 3 definitions of preprocessing directive are used to
@@ -29,7 +37,8 @@
  * When VARIABLE_FLOATING_POINT_FLOATX is defined, FloatX will substitute
  * double as the single private data member
  */
-//#define VARIABLE_FLOATING_POINT_FLOATX //Tested 11.04.2022
+//#define VARIABLE_FLOATING_POINT_FLOATX
+//Tested 11.04.2022
 
 /**
  * When FIXED_POINT_FIXEDPTC is defined, FIXEDPTC will substitute
@@ -101,7 +110,7 @@ private:
 #endif //end of Dummy_IN_THE_WILDERNESS
 #ifdef VARIABLE_FLOATING_POINT_FLOATX
 private:
-    flx::floatx<EXPONENT, FRACTION, double>content;
+    VFP content = 0.0;
 #endif //end of VARIABLE_FLOATING_POINT_FLOATX
 #ifdef FIXED_POINT_FIXEDPTC
 private:
@@ -160,6 +169,7 @@ public:
      */
     static void recordExponent(const double);           //013-a
     static void recordExponent(const fixedpt);          //013-b
+    static void recordExponent(const VFP);		  //013-c
     static void resetExpoRecord();                      //014
     static void showExpoRecord();                       //015
 
@@ -174,8 +184,17 @@ public:
      * initialize properly with non-trivial default
      * constructor.
      */
+#ifndef VARIABLE_FLOATING_POINT_FLOATX     
     Dummy() = default;
-
+#endif
+#ifdef VARIABLE_FLOATING_POINT_FLOATX
+    /*doesn't work*/
+    //Dummy(){};
+    /*doesn't work either*/
+    //explicit Dummy():content{0.0}{};
+    Dummy() = default;
+    Dummy& operator = ( const Dummy& dm ) = default;
+#endif
 
 #ifdef DUMMY_IN_THE_WILDERNESS
     constexpr Dummy(double d):content{d}{               //018
@@ -229,12 +248,13 @@ public:
   * The function set for FloatX, the "v" behind the number means variable floating point
   */
 #ifdef VARIABLE_FLOATING_POINT_FLOATX
+
     Dummy(VFP v):content{v}{                            //018-1-v
 #ifndef DISABLE_OPERATION_STATISTICS
         recordExponent(v);
 #endif
     }
-   Dummy(double d){                                     //018-v
+    Dummy(double d){                                     //018-v
         content = VFP(d);
 #ifndef DISABLE_OPERATION_STATISTICS
         recordExponent(d);
