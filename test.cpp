@@ -32,11 +32,69 @@ bool isInTolerance(double std, double actual){
     }
 }
 
+Dummy aForLoopTest(int iterNum, FILE *stat){
+    /**======needed=========*/
+    int nrIterAdd =0,
+        nrIterMul =0,
+        nrIterDiv =0,
+        nrIterConv=0,
+        nrIterElem=0;
+    int iter = 1;
+    /**======needed=========*/
+
+    //FILE *stat = fopen(PATH_OF_STATISTIC_RESULT,"w+");
+    Dummy d1 = (Dummy)1.1;
+    Dummy d2 = (Dummy)2.2;
+    Dummy d3 = (Dummy)2.2;
+
+    for(;;) {
+        /**<<======needed=========>>*/
+        Dummy::setOpRecord(   nrIterAdd,
+                              nrIterMul,
+                              nrIterDiv,
+                              nrIterConv,
+                              nrIterElem);
+        /**>>======needed=========<<*/
+        d1 = (d1 * d2) / d3 + 1.1;
+        /**<<======needed=========>>*/
+        fprintf(stat, "operation executed in "
+                      "the %i iteration:\n ", iter);
+        Dummy::pushAllRecords(stat,
+                              nrIterAdd,
+                              nrIterMul,
+                              nrIterDiv,
+                              nrIterConv,
+                              nrIterElem);
+        /**>>======needed=========<<*/
+        if (iter < iterNum) {
+            /**<<======needed=========>>*/
+            iter++;
+            /**>>======needed=========<<*/
+            continue;
+        }
+        else {
+            break;
+        }
+    }
+    return d1;
+}
+
 int main() {
+    int recA = 0;
+    int recM = 0;
+    int recD = 0;
+    int recC = 0;
+    int recE = 0;
+    FILE *stat = fopen(PATH_OF_STATISTIC_RESULT,"w+");
     cout.precision(25);
     char *fixedstr = new char[40];
-	Dummy::showAllRecords();
-	Dummy::resetAllRecords();
+	Dummy::pushAllRecords(stat,
+                          recA,
+                          recM,
+                          recD,
+                          recC,
+                          recE);
+	Dummy::resetAllRecords(stat);
 	Dummy a = Dummy(1.1);
 	Dummy b = Dummy(2.2);
 	Dummy c = Dummy(3.3);
@@ -44,12 +102,22 @@ int main() {
 	Dummy e = a;
 	Dummy f = b;
 	Dummy _array_[6] = { a,b,c,d,e,f };
+#ifdef FIXED_POINT_FIXEDPT
 	double aa = fixed2double(a.getContent());
 	double bb = fixed2double(b.getContent());
 	double cc = fixed2double(c.getContent());
 	double dd = fixed2double(d.getContent());
 	double ee = fixed2double(e.getContent());
 	double ff = fixed2double(f.getContent());
+#endif
+#ifndef  FIXED_POINT_FIXEDPT
+    double aa = 1.1;
+    double bb = 2.2;
+    double cc = 3.3;
+    double dd = 4.4;
+    double ee = 1.1;
+    double ff = 2.2;
+#endif
 	double _array_double_[6] = { aa, bb, cc, dd, ee, ff };
 	assert(sizeof(_array_)==sizeof(_array_double_));
 	printf("Size assertion passed.\n");
@@ -434,9 +502,13 @@ int main() {
     double da = scalbn(1.1,3);
     cout << "da = scalbn(1.1,3): " << da << endl;
     assert(sa == da);
-    sa = scalbn( (Dummy)-1.1,3);
+    cout << "pp ok" << endl;
+
     da = scalbn(-1.1,3);
+    cout << "normal one ok" << endl;
+    sa = scalbn( (Dummy)-1.1,3);
     assert(sa == da);
+
     printf("scalbn positive number assertion pass.\n");
     cout << "sa:" << hex << (int64_t)sa << endl;
     sa = (Dummy)1.1;
@@ -444,20 +516,87 @@ int main() {
     /**
      * Problematic
      */
+
     sa = scalbn(sa, -3);
     da = scalbn(da, -3);
+
     assert(sa == da);
     sa = (Dummy)-1.1;
     da = -1.1;
+
     sa = scalbn(sa, -3);
     da = scalbn(da, -3);
     printf("scalbn negative number assertion pass.\n");
     assert(sa == da);
 
-
-
 #endif // end of #if defined(FIXED_POINT_FIXEDPTC)
-	Dummy::showAllRecords();
-	Dummy::resetAllRecords();
-	Dummy::showAllRecords();
+	Dummy::pushAllRecords(stat,
+                          recA,
+                          recM,
+                          recD,
+                          recC,
+                          recE);
+
+	Dummy::resetAllRecords(stat);
+	//Dummy::pushAllRecords();
+    Dummy fx1 = 13.2;
+    double fa1 = 13.2;
+    int i1 = 0,i0 = 0;
+    frexp(fx1,&i0);
+    frexp(fa1,&i1);
+    assert(i0 == i1);
+    fx1 = 0.03125;
+    fa1 = 0.03125;
+    frexp(fx1,&i0);
+    frexp(fa1,&i1);
+    assert(i0 == i1);
+    printf("frexp assertion for VFP passed");
+/**
+ * Test for recording method.
+ */
+
+    /**
+     * simulation of dctran()
+     */
+    /**<<======needed=========>>*/
+    int bigIter = 0;
+    int tmStpAdd = 0,
+        tmStpMul = 0,
+        tmStpDiv = 0,
+        tmStpConv = 0,
+        tmStpElem = 0;
+    Dummy neoA;
+    neoA.setContent(0.0);
+    FILE *statTmStp = fopen(PATH_OF_STATISTIC_RESULT,"w");
+    Dummy::setOpRecord( tmStpAdd,
+                        tmStpMul,
+                        tmStpDiv,
+                        tmStpConv,
+                        tmStpElem);
+
+    calculation:
+    neoA = aForLoopTest(bigIter,statTmStp);
+    if(neoA < 10){
+
+        fprintf(statTmStp, "Time Step %i: \n",bigIter);
+        bigIter++;
+        Dummy::pushAllRecords(statTmStp,
+                              tmStpAdd,
+                              tmStpMul,
+                              tmStpDiv,
+                              tmStpConv,
+                              tmStpElem);
+        fprintf(statTmStp, " ========================== \n");
+        goto calculation;
+    }
+    else{
+        bigIter++;
+        Dummy::pushAllRecords(statTmStp,
+                              tmStpAdd,
+                              tmStpMul,
+                              tmStpDiv,
+                              tmStpConv,
+                              tmStpElem);
+    }
+
 }

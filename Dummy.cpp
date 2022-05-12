@@ -113,13 +113,33 @@ void Dummy::resetRecord() {
     printf("Record of operation reset. \n");
 }
 
-//012
-void Dummy::showRecord() {
-    printf("Number of Addition/Subtraction: %i \n", numAdd);
-    printf("Number of Multiplication: %i \n", numMul);
-    printf("Number of Division: %i \n", numDiv);
-    printf("Number of Conversion to other data type: %i \n", numConv);
-    printf("Number of Elementary Calculation: %i \n", numElem);
+//012-a
+void Dummy::setOpRecord(int &recAdd, int &recMul, int &recDiv, int &recConv, int &recElem) {
+    recAdd = Dummy::numAdd;
+    recMul = Dummy::numMul;
+    recDiv = Dummy::numDiv;
+    recConv = Dummy::numConv;
+    recElem = Dummy::numElem;
+}
+
+//012-b
+void Dummy::pushOpRecord(FILE* statFile,
+                         int& lclAdd,          //local number of addition
+                         int& lclMul,
+                         int& lclDiv,
+                         int& lclConv,
+                         int& lclElem) {
+
+    fprintf(statFile,"NumAdd in the cycle: %i\n", (numAdd - lclAdd));
+    fprintf(statFile,"NumMul in the cycle: %i\n", (numMul - lclMul));
+    fprintf(statFile,"NumDiv in the cycle: %i\n", (numDiv - lclDiv));
+    fprintf(statFile,"NumConv in the cycle: %i\n", (numConv - lclConv));
+    fprintf(statFile,"NumElem in the cycle: %i\n", (numElem - lclElem));
+    fprintf(statFile,"NumAdd total so far: %i\n", numAdd );
+    fprintf(statFile,"NumMul total so far: %i\n", numMul );
+    fprintf(statFile,"NumDiv total so far: %i\n", numDiv );
+    fprintf(statFile,"NumConv total so far: %i\n", numConv );
+    fprintf(statFile,"NumElem total so far: %i\n", numElem );
 }
 
 //013-a
@@ -146,26 +166,39 @@ void Dummy::recordExponent(const fixedpt f) {
 void Dummy::resetExpoRecord(){
     clearMaxExpo();
     clearMinExpo();
-    printf("Record of exponent reset. \n");
 }
 
 //015
-void Dummy::showExpoRecord(){
+void Dummy::pushExpoRecord(FILE* statFile){
+    /*
     printf("Maximal Exponent Occurrence: %i\n", maxExponent);
     printf("Minimal Exponent Occurrence: %i\n", minExponent);
+     */
+    fprintf(statFile,"Maximum Exponent: %i\n", maxExponent);
+    fprintf(statFile,"Minimum Exponent: %i\n", minExponent);
 }
 
 //016
-void Dummy::resetAllRecords(){
+void Dummy::resetAllRecords(FILE *rFile){
     resetRecord();
     resetExpoRecord();
-    printf("All records reset. \n");
+    fprintf(rFile,"All records reset. \n");
 }
 
 //017
-void Dummy::showAllRecords(){
-    showRecord();
-    showExpoRecord();
+void Dummy::pushAllRecords(FILE* statFile,
+                           int& lclAdd,
+                           int& lclMul,
+                           int& lclDiv,
+                           int& lclConv,
+                           int& lclElem){
+    pushOpRecord(statFile,
+                 lclAdd,
+                 lclMul,
+                 lclDiv,
+                 lclConv,
+                 lclElem);
+    pushExpoRecord(statFile);
 }
 #endif
 /**
@@ -1192,6 +1225,7 @@ DOUBLE floor(DOUBLE a){
 }
 
 //118
+
 DOUBLE frexp(DOUBLE r, int* exp) {
     return (DOUBLE)((double)frexp((double)r, exp));
 }
@@ -2342,11 +2376,17 @@ DOUBLE round(DOUBLE a){
 
 //124-f (?)
 DOUBLE scalbn(DOUBLE a ,int i){
+    /*
     int64_t mask = ~(((int64_t)1 << (63-i))-1);
-    if(a.getContent()&mask)
+    if(a.getContent()&mask) {
+        printf("mask ok\n");
         throw std::invalid_argument("left shift count >= width of the type");
+    }
+     */
+
     fixedpt fa = (i >= 0 ? (a.getContent() << i)
                         : ( a.getContent() >> -i));
+
 #ifndef DISABLE_OPERATION_STATISTICS
     Dummy::recordExponent(fa);
 #endif
